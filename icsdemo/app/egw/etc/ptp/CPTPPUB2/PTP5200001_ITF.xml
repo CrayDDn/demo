@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="GBK" ?>
+<Root>
+	<!-- 银行卡路由信息查询 -->
+	<Transaction code="PTP5200001" server="OPTPQRY1" service="520001" log_switch="1">
+		<Request>
+			<ReadElement name="version" ETF_name="ITF_VER" necessary="yes" desc="接口版本"/>
+			<ReadElement name="merchantId" ETF_name="MERC_ID" necessary="yes" desc="商户编号"/>
+			<ReadElement name="requestId" ETF_name="ITF_REQ_TIME" necessary="yes" desc="商户上送的请求时间"/>
+			<ReadElement name="service" ETF_name="ITF_BUS_TYP" necessary="yes" desc="接口请求业务类型"/>
+			<ReadElement name="signType" ETF_name="SIG_TYP" necessary="yes" desc="签名类型"/>
+			<ReadElement name="bankAbbrs" ETF_name="BANK_ABBR" necessary="no" desc="银行简称"/>
+		</Request>
+		<Response>
+			<WriteElement name="version" ETF_name="ITF_VER" necessary="yes" desc="接口版本"/>
+			<WriteElement name="merchantId" ETF_name="MERC_ID" necessary="yes" desc="商户编号"/>
+			<WriteElement name="rspCode" ETF_name="GWA.MSG_CD" necessary="yes" desc="返回码"/>
+			<WriteElement name="rspMessage" ETF_name="GWA.MSG_INF" necessary="yes" desc="返回描述"/>
+			<WriteElement name="signType" value="RSA" necessary="yes" desc="签名类型"/>
+			<WriteElement name="bankRouteInfos" ETF_name="DETAIL" necessary="no" desc="银行卡路由信息"/>
+		</Response>
+	</Transaction>
+</Root>

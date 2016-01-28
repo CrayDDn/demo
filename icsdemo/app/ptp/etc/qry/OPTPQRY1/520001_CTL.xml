@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="GBK"?>
+<Application name="cod" trace="yes" desc="银行卡路由信息查询">
+	<Transaction code="520001" log_switch="1">
+		<!-- 查询所有银行的简称 -->
+		<DynSentence name="QRY_CMMTROUT_CORP_ORG">
+			<Sentence>
+				select listagg(T.CORP_ORG, '|') within group(order by T.CORP_ORG) || '|' CORP_ORG
+				from
+				(select distinct corp_org from cmmtrout) T
+			</Sentence>
+		</DynSentence>
+		<!-- 银行卡路由信息查询 -->
+		<DynSentence name="QRY_CMMTROUT">
+			<Sentence>
+				SELECT ROWNUM ID,
+				A.CORP_ORG CORP_ORG,
+				CASE A.RUT_CORG
+				WHEN 'UPOPM' THEN
+				'0'
+				ELSE
+				'1'
+				END ROUT_FLAG,
+				A.PRI_LVL
+				FROM CMMTROUT A
+				WHERE INSTR(?,A.CORP_ORG||'|') &gt; 0
+				AND A.COP_BUS_TYP = '09'
+				AND A.RUT_EFF_FLG = '0'
+				AND NOT EXISTS(
+				SELECT B.CORP_ORG
+				FROM CMMTROUT B
+				WHERE B.COP_BUS_TYP = '09'
+				AND B.RUT_EFF_FLG = '0'
+				AND INSTR(?,B.CORP_ORG||'|') &gt; 0
+				AND A.CORP_ORG=B.CORP_ORG
+				AND A.PRI_LVL &lt; B.PRI_LVL)
+				ORDER BY ROWNUM
+			</Sentence>
+			<Fields>CORP_ORG|CORP_ORG|</Fields>
+		</DynSentence>
+		<FlowCtrl>
+			<!-- 商户交易权限检查 -->
+			<Set>INP_DAT.MERC_ID=$MERC_ID</Set>
+			<Call package="PTP" function="CHK_MER_PTP_TAX" desc="检查商户交易权限">
+				<Input>INP_DAT|GWA|</Input>
+				<Output>OUT_DAT|MSG_CD|</Output>
+			</Call>
+			<If condition="NOT(IS_SUCC(@O.MSG_CD))">
+				<Exec func="PUB:GWASetMsg" error="IGNORE">
+					<Arg name="MSG_CD" value="@O.MSG_CD"/>
+					<Arg name="MSG_INF" value="校验商户出错"/>
+				</Exec>
+				<Return/>
+			</If>
+			<Set>BANK_ABBR=$BANK_ABBR</Set>
+			<!-- 当银行简称为空时 -->
+			<If condition="IS_NULL($BANK_ABBR)=1">
+				<!-- 查询所有银行的简称 -->
+				<Exec func="PUB:ReadRecord">
+					<Arg name="SqlCmd" value="QRY_CMMTROUT_CORP_ORG"/>
+				</Exec>
+				<If condition="~RetCod=2">
+					<Exec func="PUB:GWASetMsg" error="IGNORE">
+						<Arg name="MSG_CD" value="PTP80037"/>
+					</Exec>
+					<Return/>
+				</If>
+				<ElseIf condition="~RetCod!=0">
+					<Exec func="PUB:GWASetMsg" error="IGNORE">
+						<Arg name="MSG_CD" value="PTP10095"/>
+					</Exec>
+					<Return/>
+				</ElseIf>
+				<Set>CORP_ORG=$CORP_ORG</Set>
+				<Exec func="PUB:QueryInGroup" error="IGNORE">
+					<Arg name="SqlCmd" value="QRY_CMMTROUT"/>
+					<Arg name="RecordName" value="REC"></Arg> <!--组名  -->
+				</Exec>
+				<If condition="~RetCod=2">                    <!-- 查询不到结果 -->
+					<Exec func="PUB:GWASetMsg" error="IGNORE">
+						<Arg name="MSG_CD" value="PTP80037"/>
+					</Exec>
+					<Return/>
+				</If>
+				<ElseIf condition="~RetCod!=0">				  <!-- 操作数据库错误 -->
+					<Exec func="PUB:GWASetMsg" error="IGNORE">
+						<Arg name="MSG_CD" value="PTP10095"/>
+					</Exec>
+					<Return/>
+				</ElseIf>
+			</If>
+			<!-- 当银行简称不为空 -->
+			<Else>
+				<Set>CORP_ORG=STRCAT($BANK_ABBR,"|")</Set>
+				<!-- 查询路由信息 -->
+				<Exec func="PUB:QueryInGroup" error="IGNORE">
+					<Arg name="SqlCmd" value="QRY_CMMTROUT"/>
+					<Arg name="RecordName" value="REC"></Arg> <!--组名  -->
+				</Exec>
+				<If condition="~RetCod=2">                    <!-- 查询不到结果 -->
+					<Exec func="PUB:GWASetMsg" error="IGNORE">
+						<Arg name="MSG_CD" value="PTP80037"/>
+					</Exec>
+					<Return/>
+				</If>
+				<ElseIf condition="~RetCod!=0">				  <!-- 操作数据库错误 -->
+					<Exec func="PUB:GWASetMsg" error="IGNORE">
+						<Arg name="MSG_CD" value="PTP10095"/>
+					</Exec>
+					<Return/>
+				</ElseIf>
+			</Else>
+			<Exec func="PUB:DumpETF"/>
+			<!-- json报文返回 -->
+			<Exec func="PTP:ETF2JsonStr" error="IGNORE">
+				<Arg name="EtfNode" value="REC"/>
+				<Arg name="keys" value="id|bankAbbr|routeFlag"/>
+				<Arg name="values" value="ID|CORP_ORG|ROUT_FLAG"/>
+				<Arg name="DesFld" value="DETAIL"/>
+			</Exec>
+			<If condition="~RetCod!=0">
+				<Exec func="PUB:GWASetMsg" error="IGNORE">
+					<Arg name="MSG_CD" value="PTP82004"/>
+					<Arg name="MSG_INF" value="响应报文组装失败"/>
+				</Exec>
+				<Return/>
+			</If>
+			<Set>GWA.MSG_INF="交易成功"</Set>
+			<Exec func="PUB:GWASetMsg" error="IGNORE">
+					<Arg name="MSG_CD" value="PTP00000"/>
+				</Exec>
+		</FlowCtrl>
+	</Transaction>
+</Application>

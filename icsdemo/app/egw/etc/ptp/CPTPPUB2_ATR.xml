@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="GBK"?>
+<Server name="CPTPPUB2" type="CCA" trace="INFO">
+	<Declare name="itfengine" class="com.hisun.engine.HiEngine">
+		<Param name="ITF" value="etc/ptp/CPTPPUB2_ITF.xml"/>
+	</Declare>
+	<Declare name="StrategyHandler" class="com.hisun.ips.handler.HiConvStrategyHandler">
+    </Declare>
+    
+    <Process name="proc1" msgtype="PLTIN0">
+        <Handler name="StrategyHandler" />
+        <Handler name="itfengine" />
+        <SystemHandler name="callService" />
+        <SystemHandler name="addMsgHeader" param="plain_type=PLAIN_TYPE_ETF" />
+        <Handler name="itfengine" />
+    </Process>
+    <!--ITF CTL dynamic reload -->
+    <Process name="mng" msgtype="PLTMNG">
+        <Handler name="itfengine" method="manage" />
+    </Process>
+</Server>

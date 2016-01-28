@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="GBK"?>
+<Server name="OPTPQRY1" type="OTA" trace="DEBUG">
+	<Declare name="ctlengine" class="com.hisun.engine.HiEngine">
+		<Param name="CTL" value="app/ptp/etc/qry/OPTPQRY1_CTL.xml"/>
+	</Declare>
+	
+	<Process name="process1" msgtype="PLTIN0">
+		<Handler name="ctlengine"></Handler>
+	</Process>
+</Server>

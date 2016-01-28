@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="gb2312"?>
+<Root>
+	<Transaction code="3015213" log_switch="1" desc="放款/还款查询">
+		<DynSentence name="QRY_PTPTPAYDETAIL_INFO">
+			<Sentence>
+				SELECT TRAN_FROM,PAY_AMT,WC_ORD_NO,PAY_FEE,ORD_STS,TAR_ID,PROT_ID
+				FROM PTPTPAYDETAIL
+				WHERE
+				MERC_PAY_NO=?
+			</Sentence>
+			<Fields>ORDER_ID|</Fields>
+		</DynSentence>
+		<FlowCtrl>
+			<Exec func="PUB:DumpETF"/>
+			<Exec func="PUB:ReadRecord">
+				<Arg name="SqlCmd" value="QRY_PTPTPAYDETAIL_INFO"></Arg>
+			</Exec>
+			<If condition="~RetCod=2">
+			<Exec func="PUB:GWASetMsg">
+				<Arg name="MsgCd" value="PTP80039" />             <!-- 该商户订单号不存在 -->
+			</Exec>
+			<Return />
+			</If>
+			<ElseIf condition="~RetCod=-1">
+				<Exec func="PUB:GWASetMsg">
+					<Arg name="MsgCd" value="PTP99999" />
+				</Exec>
+				<Return/>
+			</ElseIf>
+			<Set>TOTAL_AMT=ADDAMT($PAY_AMT,$PAY_FEE)</Set>
+			<Set>TOTAL_AMT=FMUL($TOTAL_AMT,100,0)</Set>
+			<Set>CORE_ORDER_ID=$WC_ORD_NO</Set>
+			<Set>ORDER_STS=$ORD_STS</Set>
+			<Exec func="PUB:GWASetMsg">
+				<Arg name="MsgCd" value="PTP00000" />
+			</Exec>
+			<Set>GWA.MSG_INF="交易成功"</Set>
+		</FlowCtrl>
+	</Transaction>
+</Root>

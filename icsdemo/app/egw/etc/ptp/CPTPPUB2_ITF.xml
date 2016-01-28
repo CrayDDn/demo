@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="GBK"?>
+<Application name="cod" log_switch="1">
+	<GetTxnCode>
+		<Item value="HEAD.TRAN_CD" type="xml" />
+	</GetTxnCode>
+	<NamespaceDeclare>
+		<Item name="XMLEncoding" value="GBK" /><!-- 定义XML字符集 -->
+		<!--<Item name="RootName" value="Root"/> --> <!-- 定义Root节点 -->
+	</NamespaceDeclare>
+	<Include file="etc/ptp/CPTPPUB2/PTP5200001_ITF.xml" desc="银行卡路由信息查询"></Include>
+</Application>
